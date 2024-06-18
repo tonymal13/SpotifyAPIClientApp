@@ -1,12 +1,14 @@
 package ru.mal.SpotifyClient.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+
+import ru.mal.SpotifyClient.config.ClientConfig;
 import ru.mal.SpotifyClient.entity.AlbumResponseFromSpotifyApi;
 
 import javax.json.Json;
@@ -15,14 +17,23 @@ import javax.json.JsonReader;
 import java.io.StringReader;
 import java.util.Base64;
 
-@RequiredArgsConstructor
+@Component
 public class SpotifyAPIClient {
 
-    private static final String client_id="your_spotify_client_id";
-    private static final String client_secret="your_spotify_client_secret";
+    private ClientConfig clientConfig;
 
-    public static Mono<String> getToken() {
-        System.out.println(client_id);
+    private final String client_id;
+
+    private final String client_secret;
+
+    public SpotifyAPIClient(ClientConfig clientConfig) {
+        this.clientConfig=clientConfig;
+        client_id = clientConfig.getClientId();
+        client_secret = clientConfig.getClientSecret();
+    }
+
+
+    public Mono<String> getToken(){
         return webClient.post()
                 .uri("https://accounts.spotify.com/api/token")
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
@@ -34,7 +45,7 @@ public class SpotifyAPIClient {
 
     private static final WebClient webClient = WebClient.create();
 
-    public static Mono<AlbumResponseFromSpotifyApi> getAlbumsByTitle(String query, String type) {
+    public Mono<AlbumResponseFromSpotifyApi> getAlbumsByTitle(String query){
         String accessTokenPayloadString = getToken().block();
         JsonReader jsonReader = Json.createReader(new StringReader(accessTokenPayloadString));
         JsonObject tokenPayloadJson = jsonReader.readObject();
@@ -43,7 +54,7 @@ public class SpotifyAPIClient {
         String accessToken = tokenPayloadJson.getString("access_token");
 
         return webClient.get()
-                .uri(String.format( "https://api.spotify.com/v1/search?q=%s&type=%s",query,type))
+                .uri(String.format( "https://api.spotify.com/v1/search?type=album&q=%s",query))
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                 .retrieve()
